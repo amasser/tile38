@@ -368,7 +368,7 @@ func (sw *scanWriter) writeObject(opts ScanWriterParams) bool {
 		return sw.count < sw.limit
 	}
 	if opts.clip != nil {
-		opts.o = clip.Clip(opts.o, opts.clip)
+		opts.o = clip.Clip(opts.o, opts.clip, &sw.s.geomIndexOpts)
 	}
 	switch sw.msg.OutputType {
 	case JSON:
@@ -400,12 +400,13 @@ func (sw *scanWriter) writeObject(opts ScanWriterParams) bool {
 
 			} else if len(sw.farr) > 0 {
 				jsfields = `,"fields":[`
-				for i := range sw.farr {
+				for i, name := range sw.farr {
 					if i > 0 {
 						jsfields += `,`
 					}
-					if len(opts.fields) > i {
-						jsfields += strconv.FormatFloat(opts.fields[i], 'f', -1, 64)
+					j := sw.fmap[name]
+					if j < len(opts.fields) {
+						jsfields += strconv.FormatFloat(opts.fields[j], 'f', -1, 64)
 					} else {
 						jsfields += "0"
 					}
@@ -485,7 +486,7 @@ func (sw *scanWriter) writeObject(opts ScanWriterParams) bool {
 			}
 
 			if sw.hasFieldsOutput() {
-				fvs := orderFields(sw.fmap, opts.fields)
+				fvs := orderFields(sw.fmap, sw.farr, opts.fields)
 				if len(fvs) > 0 {
 					fvals := make([]resp.Value, 0, len(fvs)*2)
 					for i, fv := range fvs {
